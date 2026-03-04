@@ -6,7 +6,6 @@ from src import RabbitMQProducer, create_random_purchase
 def main():
     producer = RabbitMQProducer()
     try:
-        producer.connect()
         print("Generator started- press Ctrl+C to stop")
         while True:
             success = producer.publish(create_random_purchase())

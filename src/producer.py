@@ -24,27 +24,31 @@ class RabbitMQProducer:
             print(f"Failed to connect to RabbitMQ: {e}")
             return False
 
+    def _ensure_connection(self):
+        if not self.connection or self.connection.is_closed:
+            return self.connect()
+        return True
+
+    def _send_to_queue(self, purchase_model):
+        self.channel.basic_publish(
+            exchange='',
+            routing_key=self.queue_name,
+            body=json.dumps(purchase_model.dict(), default=str),
+            properties=pika.BasicProperties(delivery_mode=2)
+        )
+
     def publish(self, purchase_model):
         attempt = 0
         while True:
             try:
-                if not self.connection or self.connection.is_closed:
-                    if not self.connect():
-                        attempt += 1
-                        print(f"Connection failed. Attempt {attempt}. Retrying in {DEFAULT_RETRY_SECONDS_DELAY} seconds")
-                        time.sleep(DEFAULT_RETRY_SECONDS_DELAY)
-                        continue
-                self.channel.basic_publish(
-                    exchange='',
-                    routing_key=self.queue_name,
-                    body=json.dumps(purchase_model.dict(), default=str),
-                    properties=pika.BasicProperties(delivery_mode=2)
-                )
+                if not self._ensure_connection():
+                    raise Exception("Could not establish connection")
+                self._send_to_queue(purchase_model)
                 print(f"Successfully sent purchase {purchase_model.purchase_id}")
                 return True
             except Exception as e:
                 attempt += 1
-                print(f"Publish error: {e}")
+                print(f"Error: {e}")
                 print(f"Attempt {attempt}. Retrying in {DEFAULT_RETRY_SECONDS_DELAY} seconds")
                 self.close()
                 time.sleep(DEFAULT_RETRY_SECONDS_DELAY)

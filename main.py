@@ -8,9 +8,7 @@ def main():
     try:
         print("Generator started- press Ctrl+C to stop")
         while True:
-            success = producer.publish(create_random_purchase())
-            if not success:
-                print("Could not recover. Skipping this purchase.")
+            producer.publish(create_random_purchase())
             time.sleep(random.uniform(1, 5))
     except KeyboardInterrupt:
         print("Generator stop")

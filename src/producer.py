@@ -2,15 +2,15 @@ import pika
 import json
 import time
 
+DEFAULT_RETRY_SECONDS_DELAY = 5
+
 
 class RabbitMQProducer:
-    def __init__(self, host='localhost', queue_name='purchases_queue', max_retries=3):
+    def __init__(self, host='localhost', queue_name='purchases_queue'):
         self.host = host
         self.queue_name = queue_name
         self.connection = None
         self.channel = None
-        self.max_retries = max_retries
-        self.SECONDS_WAIT_BEFORE_RETRY = 2
 
     def connect(self):
         try:
@@ -25,16 +25,15 @@ class RabbitMQProducer:
             return False
 
     def publish(self, purchase_model):
-        retries = 0
-        while retries < self.max_retries:
-            if not self.connection or self.connection.is_closed:
-                is_connected = self.connect()
-                if not is_connected:
-                    retries += 1
-                    print(f"Connection failed. Attempt {retries} retry")
-                    time.sleep(self.SECONDS_WAIT_BEFORE_RETRY)
-                    continue
+        attempt = 0
+        while True:
             try:
+                if not self.connection or self.connection.is_closed:
+                    if not self.connect():
+                        attempt += 1
+                        print(f"Connection failed. Attempt {attempt}. Retrying in {DEFAULT_RETRY_SECONDS_DELAY} seconds")
+                        time.sleep(DEFAULT_RETRY_SECONDS_DELAY)
+                        continue
                 self.channel.basic_publish(
                     exchange='',
                     routing_key=self.queue_name,
@@ -44,12 +43,11 @@ class RabbitMQProducer:
                 print(f"Successfully sent purchase {purchase_model.purchase_id}")
                 return True
             except Exception as e:
-                retries += 1
-                print(f"Publish error: {e}. Attempt {retries} retry")
+                attempt += 1
+                print(f"Publish error: {e}")
+                print(f"Attempt {attempt}. Retrying in {DEFAULT_RETRY_SECONDS_DELAY} seconds")
                 self.close()
-                time.sleep(self.SECONDS_WAIT_BEFORE_RETRY)
-        print(f"Failed to send message after {self.max_retries} attempts.")
-        return False
+                time.sleep(DEFAULT_RETRY_SECONDS_DELAY)
 
     def close(self):
         try:

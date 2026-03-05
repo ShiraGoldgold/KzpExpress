@@ -12,7 +12,7 @@ class RabbitMQProducer:
         self.connection = None
         self.channel = None
 
-    def connect(self):
+    def _connect(self):
         try:
             params = pika.ConnectionParameters(host=self.host, connection_attempts=1)
             self.connection = pika.BlockingConnection(params)

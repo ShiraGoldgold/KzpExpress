@@ -1,4 +1,3 @@
-import time
 from .rabbitmq_base import RabbitMQBase
 
 
@@ -11,18 +10,10 @@ class RabbitMQConsumer(RabbitMQBase):
             auto_ack=False
         )
 
+    def _action_when_running(self, callback):
+        self._set_consume_channel(callback)
+        print(f"Consumer for {self.queue_name} queue ready. Waiting for messages")
+        self.channel.start_consuming()
+
     def consume(self, callback):
-        attempt = 0
-        while True:
-            try:
-                if not self._ensure_connection():
-                    raise Exception("Could not establish connection for consuming")
-                self._set_consume_channel(callback)
-                print(f"Consumer for {self.queue_name} queue ready. Waiting for messages")
-                self.channel.start_consuming()
-            except Exception as e:
-                attempt += 1
-                print(f"Error consumer: {e}")
-                print(f"Connection Attempt {attempt}. Retrying in {self.retry_delay} seconds")
-                self.close()
-                time.sleep(self.retry_delay)
+        self._run_with_retry(callback)

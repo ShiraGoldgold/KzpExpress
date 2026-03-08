@@ -1,17 +1,16 @@
 import redis
 import json
-import time
+from base_client import BaseClient
 
 
-class RedisClient:
+class RedisClient(BaseClient):
     def __init__(self, host='localhost', port=6379, db=0, retry_delay=5):
-        self.host = host
+        super().__init__(host, retry_delay)
         self.port = port
         self.db = db
-        self.retry_delay = retry_delay
         self.client = None
 
-    def connect(self):
+    def _connect(self):
         try:
             self.client = redis.Redis(
                 host=self.host,
@@ -24,25 +23,19 @@ class RedisClient:
             print(f"Failed to connect to Redis: {e}")
             return False
 
-    def _ensure_connection(self):
-        if not self.client:
-            return self.connect()
+    def _is_connected(self):
         try:
             return self.client.ping()
         except:
-            return self.connect()
+            return False
+
+    def _handle_error(self):
+        pass
+
+    def _action_when_running(self, data_id, data, ttl_seconds):
+        json_data = json.dumps(data, default=str)
+        self.client.set(name=data_id, value=json_data, ex=ttl_seconds)
+        print(f"Successfully stored {data_id} in Redis with {ttl_seconds}s TTL")
 
     def store_data(self, data_id, data, ttl_seconds=180):
-        attempt = 0
-        while True:
-            try:
-                if not self._ensure_connection():
-                    raise Exception("Could not establish connection for redis")
-                json_data = json.dumps(data, default=str)
-                self.client.set(name=data_id, value=json_data, ex=ttl_seconds)
-                print(f"Successfully stored {data_id} in Redis with {ttl_seconds}s TTL")
-                return True
-            except Exception as e:
-                attempt += 1
-                print(f"Redis Error: {e}. Attempt {attempt}. Retrying in {self.retry_delay}s...")
-                time.sleep(self.retry_delay)
+        self._run_with_retry(data_id, data, ttl_seconds)

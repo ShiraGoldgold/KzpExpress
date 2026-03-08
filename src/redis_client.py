@@ -30,7 +30,14 @@ class RedisClient(BaseClient):
             return False
 
     def _handle_error(self):
-        pass
+        self._close()
+
+    def _close(self):
+        if self.client:
+            try:
+                self.client.close()
+            except:
+                pass
 
     def _action_when_running(self, data_id, data, ttl_seconds):
         json_data = json.dumps(data, default=str)

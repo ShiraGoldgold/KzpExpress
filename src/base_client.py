@@ -6,6 +6,7 @@ class BaseClient(ABC):
     def __init__(self, host, retry_delay=5):
         self.host = host
         self.retry_delay = retry_delay
+        self.running = True
 
     @abstractmethod
     def _connect(self):
@@ -23,6 +24,10 @@ class BaseClient(ABC):
     def _action_when_running(self, *args, **kwargs):
         pass
 
+    @abstractmethod
+    def _close(self):
+        pass
+
     def _ensure_connection(self):
         if not self._is_connected():
             return self._connect()
@@ -30,14 +35,21 @@ class BaseClient(ABC):
 
     def _run_with_retry(self, *args, **kwargs):
         attempt = 0
-        while True:
+        while self.running:
             try:
                 if not self._ensure_connection():
                     raise Exception(f"Failed to connect to {self.host}")
                 self._action_when_running(*args, **kwargs)
+                return
             except Exception as e:
+                if not self.running:
+                    break
                 attempt += 1
                 print(f"[{self.__class__.__name__}] Error: {e}. Attempt {attempt}. Retrying in {self.retry_delay}s")
                 self._handle_error()
                 time.sleep(self.retry_delay)
 
+    def stop(self):
+        print(f"[{self.__class__.__name__}] Stopping gracefully")
+        self.running = False
+        self._close()

@@ -25,9 +25,9 @@ class RabbitMQBase(BaseClient, ABC):
         return self.connection is not None and self.connection.is_open
 
     def _handle_error(self):
-        self.close()
+        self._close()
 
-    def close(self):
+    def _close(self):
         try:
             if self.connection and self.connection.is_open:
                 self.connection.close()

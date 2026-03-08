@@ -24,13 +24,12 @@ class RabbitMQProducer(RabbitMQBase):
         while True:
             try:
                 if not self._ensure_connection():
-                    raise Exception("Could not establish connection")
+                    raise Exception("Could not establish connection for producing")
                 self._send_to_queue(purchase_model)
                 print(f"Successfully sent purchase {purchase_model.purchase_id}")
-                return True
             except Exception as e:
                 attempt += 1
-                print(f"Error: {e}")
+                print(f"Error producer: {e}")
                 print(f"Attempt {attempt}. Retrying in {self.retry_delay} seconds")
                 self.close()
                 time.sleep(self.retry_delay)

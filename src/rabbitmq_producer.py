@@ -1,6 +1,6 @@
 import pika
 import json
-from rabbitmq_base import RabbitMQBase
+from .rabbitmq_base import RabbitMQBase
 
 
 class RabbitMQProducer(RabbitMQBase):

@@ -3,7 +3,7 @@ import time
 
 
 class BaseClient(ABC):
-    def __init__(self, host, retry_delay=5):
+    def __init__(self, host, retry_delay):
         self.host = host
         self.retry_delay = retry_delay
         self.running = True
@@ -22,10 +22,6 @@ class BaseClient(ABC):
 
     @abstractmethod
     def _action_when_running(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
-    def _close(self):
         pass
 
     def _ensure_connection(self):
@@ -49,7 +45,10 @@ class BaseClient(ABC):
                 self._handle_error()
                 time.sleep(self.retry_delay)
 
+    @abstractmethod
+    def close(self):
+        pass
+
     def stop(self):
         print(f"[{self.__class__.__name__}] Stopping gracefully")
         self.running = False
-        self._close()

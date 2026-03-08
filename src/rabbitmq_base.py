@@ -1,10 +1,10 @@
 from abc import ABC
 import pika
-from base_client import BaseClient
+from .base_client import BaseClient
 
 
 class RabbitMQBase(BaseClient, ABC):
-    def __init__(self, host='localhost', queue_name='purchases_queue', retry_delay=5):
+    def __init__(self, retry_delay, queue_name, host='localhost'):
         super().__init__(host, retry_delay)
         self.queue_name = queue_name
         self.connection = None
@@ -25,9 +25,9 @@ class RabbitMQBase(BaseClient, ABC):
         return self.connection is not None and self.connection.is_open
 
     def _handle_error(self):
-        self._close()
+        self.close()
 
-    def _close(self):
+    def close(self):
         try:
             if self.connection and self.connection.is_open:
                 self.connection.close()

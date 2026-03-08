@@ -4,7 +4,7 @@ from src import RabbitMQProducer, create_random_purchase
 
 
 def main():
-    producer = RabbitMQProducer()
+    producer = RabbitMQProducer(retry_delay=5, queue_name='purchases_queue')
     try:
         print("Generator started- press Ctrl+C to stop")
         while True:

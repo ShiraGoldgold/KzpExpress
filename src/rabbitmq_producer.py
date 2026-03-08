@@ -1,33 +1,15 @@
 import pika
 import json
 import time
+from rabbitmq_base import RabbitMQBase
 
-DEFAULT_RETRY_SECONDS_DELAY = 5
 
-
-class RabbitMQProducer:
-    def __init__(self, host='localhost', queue_name='purchases_queue'):
-        self.host = host
-        self.queue_name = queue_name
-        self.connection = None
-        self.channel = None
-
+class RabbitMQProducer(RabbitMQBase):
     def _connect(self):
-        try:
-            params = pika.ConnectionParameters(host=self.host, connection_attempts=1)
-            self.connection = pika.BlockingConnection(params)
-            self.channel = self.connection.channel()
-            self.channel.queue_declare(queue=self.queue_name, durable=True)
+        success = super()._connect()
+        if success:
             self.channel.confirm_delivery()
-            return True
-        except Exception as e:
-            print(f"Failed to connect to RabbitMQ: {e}")
-            return False
-
-    def _ensure_connection(self):
-        if not self.connection or self.connection.is_closed:
-            return self.connect()
-        return True
+        return success
 
     def _send_to_queue(self, purchase_model):
         self.channel.basic_publish(
@@ -49,16 +31,6 @@ class RabbitMQProducer:
             except Exception as e:
                 attempt += 1
                 print(f"Error: {e}")
-                print(f"Attempt {attempt}. Retrying in {DEFAULT_RETRY_SECONDS_DELAY} seconds")
+                print(f"Attempt {attempt}. Retrying in {self.retry_delay} seconds")
                 self.close()
-                time.sleep(DEFAULT_RETRY_SECONDS_DELAY)
-
-    def close(self):
-        try:
-            if self.connection and self.connection.is_open:
-                self.connection.close()
-        except:
-            pass
-        finally:
-            self.connection = None
-            self.channel = None
+                time.sleep(self.retry_delay)

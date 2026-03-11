@@ -26,7 +26,7 @@ def main():
     finally:
         print("Final cleanup")
         rabbit_consumer.close()
-        # redis_client.close()
+        redis_client.close()
         print("System stopped safely")
 
 

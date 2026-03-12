@@ -14,6 +14,7 @@ def shutdown_handler(sig, frame):
 def processing_logic(data):
     print(f"Processing purchase: {data.get('purchase_id')}")
     redis_client.store_data(data['purchase_id'], data, ttl_seconds=180)
+    #send to kafka
 
 
 def main():

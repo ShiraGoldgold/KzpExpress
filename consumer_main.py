@@ -1,9 +1,13 @@
 import signal
-from src import RabbitMQConsumer
-from src import RedisClient
+import time
 
-redis_client = RedisClient(retry_delay=5)
-rabbit_consumer = RabbitMQConsumer(retry_delay=5, queue_name='purchases_queue')
+from src import RabbitMQConsumer, RedisClient, KafkaProducer
+
+RETRY_DELAY = 5
+
+redis_client = RedisClient(retry_delay=RETRY_DELAY)
+rabbit_consumer = RabbitMQConsumer(retry_delay=RETRY_DELAY, queue_name='purchases_queue')
+kafka_producer = KafkaProducer(retry_delay=RETRY_DELAY, topic_name='purchases_topic')
 
 
 def shutdown_handler(sig, frame):
@@ -14,7 +18,8 @@ def shutdown_handler(sig, frame):
 def processing_logic(data):
     print(f"Processing purchase: {data.get('purchase_id')}")
     redis_client.store_data(data['purchase_id'], data, ttl_seconds=180)
-    #send to kafka
+    kafka_producer.send_event(data)
+    print(f"Successfully sent purchase {data['purchase_id']} to Redis & Kafka")
 
 
 def main():
@@ -28,6 +33,7 @@ def main():
         print("Final cleanup")
         rabbit_consumer.close()
         redis_client.close()
+        kafka_producer.close()
         print("System stopped safely")
 
 

@@ -27,7 +27,7 @@ class RabbitMQConsumer(RabbitMQBase):
         print(f"Consumer for {self.queue_name} queue ready. Waiting for messages")
         self.channel.start_consuming()
 
-    def consume(self, callback):
+    def consume_and_act_realtime_msgs(self, callback):
         self._run_with_retry(callback)
 
     def stop(self):

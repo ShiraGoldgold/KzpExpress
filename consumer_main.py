@@ -17,9 +17,9 @@ def shutdown_handler(sig, frame):
 
 def processing_logic(data):
     print(f"Processing purchase: {data.get('purchase_id')}")
-    redis_client.store_data(data['purchase_id'], data, ttl_seconds=180)
-    kafka_producer.send_event(data)
-    time.sleep(100)
+    #redis_client.store_data(data['purchase_id'], data, ttl_seconds=180)
+    #kafka_producer.send_event(data)
+    #time.sleep(100)
     print(f"Successfully sent purchase {data['purchase_id']} to Redis & Kafka")
 
 

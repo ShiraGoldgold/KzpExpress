@@ -35,11 +35,10 @@ class BaseClient(ABC):
             try:
                 if not self._ensure_connection():
                     raise Exception(f"Failed to connect to {self.host}")
-                self._action_when_running(*args, **kwargs)
-                return
+                return self._action_when_running(*args, **kwargs)
             except Exception as e:
                 if not self.running:
-                    break
+                     return self._handle_error()
                 attempt += 1
                 print(f"[{self.__class__.__name__}] Error: {e}. Attempt {attempt}. Retrying in {self.retry_delay}s")
                 self._handle_error()

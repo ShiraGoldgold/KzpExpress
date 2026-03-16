@@ -26,7 +26,7 @@ def main():
     print("Consumer Loop started. Press Ctrl+C to stop.")
     while running:
         try:
-            rabbit_consumer.consume_one_msg(callback=processing_logic)
+            rabbit_consumer.consume(callback=processing_logic)
         except Exception as e:
             print(f"Error in main loop: {e}")
             time.sleep(RETRY_DELAY)

@@ -32,13 +32,20 @@ class RedisClient(BaseClient):
     def _handle_error(self):
         self.close()
 
-    def _action_when_running(self, data_id, data, ttl_seconds):
-        json_data = json.dumps(data, default=str)
-        self.client.set(name=data_id, value=json_data, ex=ttl_seconds)
-        print(f"Successfully stored {data_id} in Redis with {ttl_seconds}s TTL")
+    def _action_when_running(self, action, *args, **kwargs):
+        action(*args, **kwargs)
 
-    def store_data(self, data_id, data, ttl_seconds):
-        self._run_with_retry(data_id, data, ttl_seconds)
+    def set_data(self, key, value, ttl):
+        def logic():
+            json_data = json.dumps(value, default=str)
+            self.client.set(name=key, value=json_data, ex=ttl)
+        self._run_with_retry(logic)
+
+    def get_data(self, key):
+        def logic():
+            data = self.client.get(key)
+            return json.loads(data) if data else None
+        return self._run_with_retry(logic)
 
     def close(self):
         if self.client:

@@ -1,4 +1,6 @@
 import json
+import time
+
 from confluent_kafka import Consumer, KafkaError
 from .base_client import BaseClient
 
@@ -32,11 +34,6 @@ class KafkaConsumer(BaseClient):
     def _handle_error(self):
         self.close()
 
-    def close(self):
-        if self.consumer:
-            self.consumer.close()
-            self.consumer = None
-
     def _action_when_running(self, callback):
         msg = self.consumer.poll(1.0)
         if msg is None:
@@ -55,4 +52,13 @@ class KafkaConsumer(BaseClient):
 
     def consume_and_act_realtime_msgs(self, callback):
         while self.running:
-            self._run_with_retry(callback)
+            try:
+                self._run_with_retry(callback)
+            except Exception as e:
+                print(f"KafkaConsumer: Error in consume_and_act_realtime_msgs loop: {e}")
+                time.sleep(self.retry_delay)
+
+    def close(self):
+        if self.consumer:
+            self.consumer.close()
+            self.consumer = None

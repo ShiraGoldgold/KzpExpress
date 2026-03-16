@@ -40,7 +40,7 @@ class KafkaProducer(BaseClient):
         if error is not None:
             raise Exception(f"Kafka delivery failed: {error}")
         else:
-            print(f"Successfully stored {msg} in Kafka topic {msg.topic()}")
+            print(f"Successfully stored msg in Kafka topic {msg.topic()}")
 
     def _action_when_running(self, data):
         self.producer.produce(

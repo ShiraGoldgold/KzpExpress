@@ -35,16 +35,16 @@ class RedisClient(BaseClient):
     def _action_when_running(self, action, *args, **kwargs):
         action(*args, **kwargs)
 
-    def set_data(self, key, value, ttl):
+    def add_to_hset(self, key, data_field, data_value, ttl_seconds):
         def logic():
-            json_data = json.dumps(value, default=str)
-            self.client.set(name=key, value=json_data, ex=ttl)
+            self.client.hset(key, data_field, data_value)
+            self.client.expire(name=key, time=ttl_seconds)
         self._run_with_retry(logic)
+        print(f"Successfully stored msg in Redis key: {key}")
 
-    def get_data(self, key):
+    def get_hset_values(self, key):
         def logic():
-            data = self.client.get(key)
-            return json.loads(data) if data else None
+            return self.client.hvals(key)
         return self._run_with_retry(logic)
 
     def close(self):

@@ -14,9 +14,10 @@ def shutdown_handler(sig, frame):
     print("\nShutdown signal received. Finishing current task...")
     running = False
     rabbit_consumer.stop()
+    kafka_producer.stop()
 
 
-def processing_logic(data):
+def processing_data_to_kafka(data):
     print(f"Processing: {data.get('purchase_id')}")
     kafka_producer.send_event(data)
 
@@ -26,7 +27,7 @@ def main():
     print("Consumer Loop started. Press Ctrl+C to stop.")
     while running:
         try:
-            rabbit_consumer.consume_and_act_realtime_msgs(callback=processing_logic)
+            rabbit_consumer.consume_and_act_realtime_msgs(callback=processing_data_to_kafka)
         except Exception as e:
             print(f"Error in main loop: {e}")
             time.sleep(RETRY_DELAY)

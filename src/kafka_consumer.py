@@ -50,13 +50,8 @@ class KafkaConsumer(BaseClient):
             print(f"Error processing Kafka message: {e}")
             raise e
 
-    def consume_and_act_realtime_msgs(self, callback):
-        while self.running:
-            try:
-                self._run_with_retry(callback)
-            except Exception as e:
-                print(f"KafkaConsumer: Error in consume_and_act_realtime_msgs loop: {e}")
-                time.sleep(self.retry_delay)
+    def consume_and_act_realtime_msg(self, callback):
+        self._run_with_retry(callback)
 
     def close(self):
         if self.consumer:

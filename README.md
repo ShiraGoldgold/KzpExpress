@@ -1,56 +1,53 @@
-# KzpExpress - Resilient & Hermetic Data Pipeline
+# KzpExpress - Resilient Data Pipeline
 
-This project implements a highly reliable, failure-tolerant data streaming pipeline designed for **Zero Data Loss**. The architecture follows the **At Least Once Delivery** principle, ensuring every purchase event is processed, indexed, and stored even under extreme infrastructure instability.
+This project implements a highly reliable and failure-tolerant data streaming pipeline. 
+The system ensures **Zero Data Loss** and follows the **At Least Once Delivery** principle, 
+guaranteeing that every purchase event is successfully processed, cached, and streamed.
 
 ## 🏗 System Architecture
-1. **Generator (Producer):** Produces purchase events and streams them to RabbitMQ.
-2. **RabbitMQ:** Acts as the persistent message buffer (Primary Ingress).
-3. **Rabbit-to-Kafka Consumer:** Orchestrates the flow from RabbitMQ to Kafka.
-4. **Kafka-to-Redis Consumer:** Processes streaming data from Kafka into Time-Windowed Redis Hashes.
-5. **Redis:** High-speed storage for real-time analytics (Top 3 items per window).
-6. **Kafka:** The central nervous system for high-throughput, idempotent data distribution.
+1. **Generator (Producer):** Generates random purchase events and sends them to RabbitMQ.
+2. **RabbitMQ:** Acts as the primary reliable message buffer with persistent queues.
+3. **Consumer (Orchestrator):** Fetches from RabbitMQ, stores in Redis for windowing/analytics, and streams to Kafka.
+4. **Redis:** Provides fast storage for tumbling window calculations with TTL-based expiration.
+5. **Kafka:** The final destination for high-throughput downstream data analysis.
 
 ---
 
 ## 🛡 Reliability & Resilience Mechanisms
 
 ### 1. Delivery Guarantees (At Least Once)
-The system is built to ensure that no message is ever "lost in flight":
-* **Manual Offset Management:** In the `KafkaConsumer`, `enable.auto.commit` is set to `False`. The offset is committed ONLY after the message is successfully processed by the callback (e.g., stored in Redis).
-* **RabbitMQ Acknowledgments:** Messages remain in the queue (Unacked) until the entire downstream flow (Kafka delivery) is confirmed.
-* **Kafka Idempotence:** The Kafka Producer uses `enable.idempotence=True` and `acks=all`. This prevents duplicate writes during network retries and ensures data is replicated across all brokers.
+To ensure no message is ever lost, the system is designed around the "At Least Once" guarantee:
+* **Manual Acknowledgments (ACKs):** RabbitMQ is configured to wait for a manual ACK. The consumer only sends this ACK after the data has been successfully processed by the next hop (Kafka/Redis).
+* **Synchronous Kafka Production:** We use `producer.flush()` after every message. This blocks the RabbitMQ ACK until Kafka confirms the message is physically stored in the broker.
+* **Idempotent Producer:** Kafka is configured with `enable.idempotence=True` to prevent duplicate messages in case of network retries.
 
-### 2. Failure Tolerance (The BaseClient Pattern)
-Every service (Redis, RabbitMQ, Kafka) inherits from a robust `BaseClient` abstract class:
-* **Infinite Retry Loop:** If a connection drops, the client enters a non-blocking retry state, attempting to reconnect every 5 seconds.
-* **Self-Healing:** The system does not crash; it "freezes" and waits for the infrastructure (Docker containers) to recover, then resumes exactly where it left off.
-* **Connection Validation:** Uses `list_topics` (Kafka) and `ping` (Redis) to verify actual connectivity before attempting operations.
+### 2. Failure Tolerance & Connection Recovery
+Every component (Redis, RabbitMQ, Kafka) inherits from a `BaseClient` that manages connection lifecycles:
+* **Infinite Retries:** If a broker (Kafka/Rabbit/Redis) goes down, the system enters a retry loop, printing clear logs, and waits for the service to recover without crashing.
+* **Prefetch Control:** `prefetch_count=1` is used in RabbitMQ to prevent the consumer from being overwhelmed and to ensure sequential, reliable processing.
+* **Persistence:** RabbitMQ queues are marked as `durable`, ensuring messages survive a RabbitMQ service restart.
 
-### 3. Disaster Recovery & Persistence
-* **RabbitMQ Durability:** Queues are `durable=True` and messages are `persistent` (delivery_mode=2), surviving broker restarts.
-* **Redis Idempotency:** By using `HSET` with `purchase_id` as a field, we ensure that duplicate message processing (inherent to At-Least-Once) results in a "no-op" write, maintaining 100% data integrity.
-* **Time-to-Live (TTL):** Data in Redis is automatically cleaned up after a defined window, preventing memory exhaustion.
-
-### 4. Graceful Shutdown
-The system implements OS signal handling (`SIGINT`):
-* Upon receiving a shutdown signal, the system finishes the **current** processing task.
-* It performs a `close()` operation on all clients, flushing buffers and closing sockets cleanly to prevent corrupted offsets or lingering connections.
+### 3. Graceful Shutdown & Signaling
+The system implements robust signal handling (`SIGINT`):
+* Upon `Ctrl+C`, the system finishes the **current** task and ensures the last message is fully processed (or requeued) before closing connections.
+* **Double-Interrupt Protection:** The system handles the edge case where a blocking `flush()` or `poll()` in the underlying C library might delay the shutdown, ensuring resources are always cleaned up.
 
 ---
 
-## 🧪 Chaos Engineering (Resilience Testing)
-We verified the system's hermeticity by intentionally killing components during peak load:
+## 🧪 Resilience Testing (Chaos Engineering)
+We verified the system's hermeticity by intentionally breaking components during runtime:
 
-| Component | Action | System Response | Recovery |
+| Component | Action | Expected Behavior | Result |
 | :--- | :--- | :--- | :--- |
-| **Kafka** | `docker stop kafka` | Consumer detects loss via `list_topics`, enters Retry loop. | Once Kafka is up, Consumer resumes and commits pending offsets. |
-| **Redis** | `docker stop redis` | Consumer fails the `HSET` operation, retries infinitely without committing Kafka offset. | Data is written to Redis only once it recovers; no data is lost. |
-| **RabbitMQ** | `docker stop rabbit` | Producer enters reconnection loop. All pending data stays in the Generator's retry buffer. | Flow resumes immediately upon RabbitMQ recovery. |
+| **Redis** | `docker stop redis` | Consumer retries `add_to_hset` infinitely. Message stays 'Unacked' in RabbitMQ. | ✅ Pass |
+| **Kafka** | `docker stop kafka` | `flush()` hits timeout -> Exception raised -> RabbitMQ `NACK` & Requeue. | ✅ Pass |
+| **RabbitMQ** | `docker stop rabbitmq` | Producer & Consumer enter reconnection loops. Data remains safe on disk. | ✅ Pass |
+| **Network Interruption** | Disconnect WiFi | Producers block and retry until connection is restored. No data loss. | ✅ Pass |
 
 ---
 
 ## 🚀 How to Run
-1. **Tear up Infrastructure:** `docker-compose up -d` (Redis, Kafka, RabbitMQ).
-2. **Start Producer:** `python generator_msg_to_rabbitmq_main.py`
-3. **Start Bridge:** `python rabbitmq_to_kafka_main.py`
-4. **Start Analytics:** `python kafka_to_redis_main.py`
+1. **Infrastructure:** Start the stack using `docker-compose up -d` (RabbitMQ, Kafka, Redis).
+2. **Generator:** `python generator_msg_to_rabbitmq_main.py`
+3. **Primary Pipeline:** `python rabbitmq_to_kafka_main.py`
+4. **Analytics/Redis:** `python kafka_to_redis_main.py`

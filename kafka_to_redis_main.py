@@ -34,10 +34,13 @@ def get_thumbling_window_key(purchase_time):
 def processing_data_to_redis(data):
     print(f"Processing: {data.get('purchase_id')}")
     purchase_time = datetime.strptime(data.get('purchase_time'), "%Y-%m-%d %H:%M:%S.%f")
-    redis_client.add_to_hset(key=get_thumbling_window_key(purchase_time),
+    key = get_thumbling_window_key(purchase_time)
+    if not redis_client.add_to_hset(key=key,
                              data_field=data.get('purchase_id'),
                              data_value=data.get('item_id'),
-                             ttl_seconds=THUMBLING_WINDOW_MINUTES * 3 * 60)
+                             ttl_seconds=THUMBLING_WINDOW_MINUTES * 3 * 60):
+            raise Exception("Error sending data to kafka")
+    print(f"Successfully stored msg in Redis key: {key}")
 
 
 def main():

@@ -39,6 +39,7 @@ class BaseClient(ABC):
             except Exception as e:
                 if not self.running:
                     print(f"[{self.__class__.__name__}] Stopped trying to solve error {e}")
+                    return False
                 attempt += 1
                 print(f"[{self.__class__.__name__}] Error: {e}. Attempt {attempt}. Retrying in {self.retry_delay}s")
                 self._handle_error()

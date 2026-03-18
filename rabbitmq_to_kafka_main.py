@@ -19,7 +19,8 @@ def shutdown_handler(sig, frame):
 
 def processing_data_to_kafka(data):
     print(f"Processing: {data.get('purchase_id')}")
-    kafka_producer.send_event(data)
+    if not kafka_producer.send_event(data):
+        raise Exception("Error sending data to kafka")
 
 
 def main():

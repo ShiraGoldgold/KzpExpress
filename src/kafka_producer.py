@@ -50,9 +50,10 @@ class KafkaProducer(BaseClient):
         )
         self.producer.poll(0)
         self.producer.flush()
+        return True
 
     def send_event(self, data):
-        self._run_with_retry(data)
+        return self._run_with_retry(data)
 
     def close(self):
         if self.producer:

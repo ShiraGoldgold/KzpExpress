@@ -1,6 +1,4 @@
 import json
-import time
-
 from confluent_kafka import Consumer, KafkaError
 from .base_client import BaseClient
 
@@ -29,7 +27,13 @@ class KafkaConsumer(BaseClient):
             return False
 
     def _is_connected(self):
-        return self.consumer is not None
+        try:
+            if self.consumer:
+                self.consumer.list_topics(timeout=0.5)
+                return True
+            return False
+        except:
+            return False
 
     def _handle_error(self):
         self.close()
@@ -37,9 +41,11 @@ class KafkaConsumer(BaseClient):
     def _action_when_running(self, callback):
         msg = self.consumer.poll(1.0)
         if msg is None:
+            if not self._is_connected():
+                raise Exception("Kafka Broker is unreachable (Poll returned None while disconnected)")
             return
         if msg.error():
-            if msg.error().code() == KafkaError._PARTITION_EOF:
+            if msg.error().code() in [KafkaError._PARTITION_EOF, KafkaError.UNKNOWN_TOPIC_OR_PART]:
                 return
             else:
                 raise Exception(msg.error())

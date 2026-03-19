@@ -28,6 +28,7 @@ Every component (Redis, RabbitMQ, Kafka) inherits from a `BaseClient` that manag
 * **Persistence:** RabbitMQ queues are marked as `durable`, ensuring messages survive a RabbitMQ service restart.
 
 ### 3. Graceful Shutdown & Signaling
+
 The system implements robust signal handling (`SIGINT`):
 * Upon `Ctrl+C`, the system finishes the **current** task and ensures the last message is fully processed (or requeued) before closing connections.
 * **Double-Interrupt Protection:** The system handles the edge case where a blocking `flush()` or `poll()` in the underlying C library might delay the shutdown, ensuring resources are always cleaned up.

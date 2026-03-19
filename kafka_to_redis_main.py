@@ -1,5 +1,6 @@
 import signal
 import time
+from datetime import datetime
 from src import (KafkaConsumer, RedisClient, get_thumbling_window_key,
                  THUMBLING_WINDOW_MINUTES)
 
@@ -21,7 +22,8 @@ def shutdown_handler(sig, frame):
 
 def processing_data_to_redis(data):
     print(f"Processing: {data.get('purchase_id')}")
-    key = get_thumbling_window_key(data.get('purchase_time'))
+    purchase_time = datetime.strptime(data.get('purchase_time'), "%Y-%m-%d %H:%M:%S.%f")
+    key = get_thumbling_window_key(purchase_time)
     if not redis_client.add_to_hset(key=key,
                              data_field=data.get('purchase_id'),
                              data_value=data.get('item_id'),

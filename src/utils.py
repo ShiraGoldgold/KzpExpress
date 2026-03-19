@@ -1,9 +1,8 @@
-from datetime import timedelta, datetime
+from datetime import timedelta
 from constants import THUMBLING_WINDOW_MINUTES
 
 
-def get_thumbling_window_key(purchase_time_str):
-    purchase_time = datetime.strptime(purchase_time_str, "%Y-%m-%d %H:%M:%S.%f")
+def get_thumbling_window_key(purchase_time):
     total_minutes = purchase_time.hour * 60 + purchase_time.minute
     start_of_window_minutes = ((total_minutes // THUMBLING_WINDOW_MINUTES)
                                * THUMBLING_WINDOW_MINUTES)

@@ -1,5 +1,4 @@
 import redis
-import json
 from .base_client import BaseClient
 
 
@@ -41,7 +40,6 @@ class RedisClient(BaseClient):
             self.client.hset(key, data_field, data_value)
             self.client.expire(name=key, time=ttl_seconds)
         return self._run_with_retry(logic)
-
 
     def get_hset_values(self, key):
         def logic():

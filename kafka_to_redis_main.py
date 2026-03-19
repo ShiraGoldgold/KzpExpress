@@ -1,11 +1,10 @@
 import signal
 import time
-from src import KafkaConsumer, RedisClient
-from datetime import timedelta, datetime
+from src import (KafkaConsumer, RedisClient, get_thumbling_window_key,
+                 THUMBLING_WINDOW_MINUTES)
 
 RETRY_DELAY = 5
 running = True
-THUMBLING_WINDOW_MINUTES = 1
 
 kafka_consumer = KafkaConsumer(retry_delay=RETRY_DELAY, topic_name='purchases_topic',
                                group_id='purchases_group')
@@ -20,21 +19,9 @@ def shutdown_handler(sig, frame):
     redis_client.stop()
 
 
-def get_thumbling_window_key(purchase_time):
-    total_minutes = purchase_time.hour * 60 + purchase_time.minute
-    start_of_window_minutes = ((total_minutes // THUMBLING_WINDOW_MINUTES)
-                               * THUMBLING_WINDOW_MINUTES)
-    window_start = purchase_time.replace(
-        hour=start_of_window_minutes // 60, minute=start_of_window_minutes % 60,
-        second=0, microsecond=0)
-    window_end = window_start + timedelta(minutes=THUMBLING_WINDOW_MINUTES)
-    return f"window:{window_start.strftime('%H:%M')}-{window_end.strftime('%H:%M')}"
-
-
 def processing_data_to_redis(data):
     print(f"Processing: {data.get('purchase_id')}")
-    purchase_time = datetime.strptime(data.get('purchase_time'), "%Y-%m-%d %H:%M:%S.%f")
-    key = get_thumbling_window_key(purchase_time)
+    key = get_thumbling_window_key(data.get('purchase_time'))
     if not redis_client.add_to_hset(key=key,
                              data_field=data.get('purchase_id'),
                              data_value=data.get('item_id'),

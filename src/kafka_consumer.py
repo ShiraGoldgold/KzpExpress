@@ -17,7 +17,11 @@ class KafkaConsumer(BaseClient):
                 'bootstrap.servers': f"{self.host}:{self.port}",
                 'group.id': self.group_id,
                 'auto.offset.reset': 'earliest',
-                'enable.auto.commit': False
+                'enable.auto.commit': False,
+                'broker.address.family': 'v4',
+                'session.timeout.ms': 6000,
+                'heartbeat.interval.ms': 2000,
+                'max.poll.interval.ms': 300000
             }
             self.consumer = Consumer(config)
             self.consumer.subscribe([self.topic_name])
@@ -28,10 +32,10 @@ class KafkaConsumer(BaseClient):
 
     def _is_connected(self):
         try:
-            if self.consumer:
-                self.consumer.list_topics(timeout=0.5)
-                return True
-            return False
+            if self.consumer is None:
+                return False
+            self.consumer.list_topics(topic=self.topic_name, timeout=0.5)
+            return True
         except:
             return False
 
@@ -39,22 +43,20 @@ class KafkaConsumer(BaseClient):
         self.close()
 
     def _action_when_running(self, callback):
-        msg = self.consumer.poll(1.0)
-        if msg is None:
-            if not self._is_connected():
-                raise Exception("Kafka Broker is unreachable (Poll returned None while disconnected)")
-            return
-        if msg.error():
-            if msg.error().code() in [KafkaError._PARTITION_EOF, KafkaError.UNKNOWN_TOPIC_OR_PART]:
+        while self.running:
+            msg = self.consumer.poll(2.0)
+            if msg is None:
+                if not self._is_connected():
+                    raise Exception("Kafka Broker is unreachable")
                 return
-            else:
-                raise Exception(msg.error())
-        try:
+            if msg.error():
+                if msg.error().code() in [KafkaError._PARTITION_EOF, KafkaError.UNKNOWN_TOPIC_OR_PART]:
+                    return
+                else:
+                    raise Exception(msg.error())
             callback(json.loads(msg.value().decode('utf-8')))
-            self.consumer.commit(asynchronous=False)
-        except Exception as e:
-            print(f"Error processing Kafka message: {e}")
-            raise e
+            self.consumer.commit(asynchronous=True)
+
 
     def consume_and_act_realtime_msg(self, callback):
         self._run_with_retry(callback)

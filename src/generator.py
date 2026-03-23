@@ -1,5 +1,5 @@
 import random
-from constants import PRODUCTS
+from .constants import PRODUCTS
 from .models import Purchase
 
 WEIGHTS = [10, 70, 20]

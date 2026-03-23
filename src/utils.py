@@ -1,5 +1,5 @@
 from datetime import timedelta
-from constants import THUMBLING_WINDOW_MINUTES
+from .constants import THUMBLING_WINDOW_MINUTES
 
 
 def get_thumbling_window_key(purchase_time):

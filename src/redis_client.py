@@ -1,6 +1,7 @@
 import redis
 from .base_client import BaseClient
-
+from redis.retry import Retry
+from redis.backoff import NoBackoff
 
 class RedisClient(BaseClient):
     def __init__(self, retry_delay, host='localhost', port=6379, db=0):
@@ -15,7 +16,11 @@ class RedisClient(BaseClient):
                 host=self.host,
                 port=self.port,
                 db=self.db,
-                decode_responses=True
+                decode_responses=True,
+            socket_connect_timeout=1,
+            retry_on_timeout=False,
+            socket_keepalive=False,
+            retry=Retry(NoBackoff(), 0)
             )
             return self.client.ping()
         except Exception as e:
@@ -32,13 +37,15 @@ class RedisClient(BaseClient):
         self.close()
 
     def _action_when_running(self, action, *args, **kwargs):
-        action(*args, **kwargs)
-        return True
+        return action(*args, **kwargs)
 
     def add_to_hset(self, key, data_field, data_value, ttl_seconds):
         def logic():
-            self.client.hset(key, data_field, data_value)
-            self.client.expire(name=key, time=ttl_seconds)
+            pipe = self.client.pipeline()
+            pipe.hset(key, data_field, data_value)
+            pipe.expire(key, ttl_seconds)
+            pipe.execute()
+            return True
         return self._run_with_retry(logic)
 
     def get_hset_values(self, key):

@@ -33,6 +33,15 @@ The system implements robust signal handling (`SIGINT`):
 * Upon `Ctrl+C`, the system finishes the **current** task and ensures the last message is fully processed (or requeued) before closing connections.
 * **Double-Interrupt Protection:** The system handles the edge case where a blocking `flush()` or `poll()` in the underlying C library might delay the shutdown, ensuring resources are always cleaned up.
 
+### 4. Network & Connectivity Optimizations
+
+To ensure high performance and reduce latency, we implemented several low-level optimizations:
+
+* **IPv4 Forced Resolution:** Configured Kafka clients with `broker.address.family: v4` to prevent connection delays caused by unsuccessful IPv6 resolution attempts on local environments.
+* **Fast Failure Detection:** Adjusted Kafka's `session.timeout.ms` and `heartbeat.interval.ms` to ensure the cluster detects consumer failures within seconds, enabling faster rebalancing.
+* **Aggressive Redis Timeouts:** Implemented `socket_connect_timeout` in the Redis client to prevent the pipeline from blocking indefinitely during network partitions.
+* **Unified Retry Logic:** All external service interactions are inherited from a centralized `BaseClient`, providing consistent exponential backoff and reconnection logic across the entire infrastructure.
+
 ---
 
 ## 🧪 Resilience Testing (Chaos Engineering)
@@ -44,6 +53,7 @@ We verified the system's hermeticity by intentionally breaking components during
 | **Kafka** | `docker stop kafka` | `flush()` hits timeout -> Exception raised -> RabbitMQ `NACK` & Requeue. | ✅ Pass |
 | **RabbitMQ** | `docker stop rabbitmq` | Producer & Consumer enter reconnection loops. Data remains safe on disk. | ✅ Pass |
 | **Network Interruption** | Disconnect WiFi | Producers block and retry until connection is restored. No data loss. | ✅ Pass |
+
 
 ---
 

@@ -22,6 +22,9 @@ class RedisClient(BaseClient):
             socket_keepalive=False,
             retry=Retry(NoBackoff(), 0)
             )
+            self.client.config_set('appendonly', 'yes')
+            self.client.config_set('appendfsync', 'always')
+            self.client.config_set('maxmemory-policy', 'volatile-lru')
             return self.client.ping()
         except Exception as e:
             print(f"Failed to connect to Redis: {e}")
@@ -41,9 +44,9 @@ class RedisClient(BaseClient):
 
     def add_to_hset(self, key, data_field, data_value, ttl_seconds):
         def logic():
-            pipe = self.client.pipeline()
+            pipe = self.client.pipeline(transaction=True)
             pipe.hset(key, data_field, data_value)
-            pipe.expire(key, ttl_seconds)
+            pipe.expire(key, ttl_seconds, nx=True)
             pipe.execute()
             return True
         return self._run_with_retry(logic)

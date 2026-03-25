@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from datetime import datetime
 import uvicorn
-from src import RedisClient, AnalyticsService, get_thumbling_window_key, THUMBLING_WINDOW_MINUTES
+from src import RedisClient, AnalyticsService, ThumblingWindowLogic, WINDOW_MINUTES
 from datetime import datetime, timedelta
 
 
@@ -20,13 +20,14 @@ HOST = "127.0.0.1"
 PORT = 8000
 redis_client = RedisClient(retry_delay=RETRY_DELAY)
 analytics_service = AnalyticsService(redis_client)
+thumblingWindowLogic = ThumblingWindowLogic()
 
 
-@app.get(f"/hot-products-last-{THUMBLING_WINDOW_MINUTES}-minutes-window")
+@app.get(f"/hot-products-last-{WINDOW_MINUTES}-minutes-window")
 async def get_hot_products():
     try:
-        window_key = get_thumbling_window_key(datetime.now() -
-                                              timedelta(minutes=THUMBLING_WINDOW_MINUTES))
+        window_key = thumblingWindowLogic.get_window_key(datetime.now() -
+                                              timedelta(minutes=WINDOW_MINUTES))
         top_products = analytics_service.get_top_three(window_key)
         return {"window": window_key, "data": top_products}
     except Exception as e:

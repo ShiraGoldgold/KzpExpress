@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
-from src import WINDOW_MINUTES
+from .constants import WINDOW_MINUTES
 
 
 class WindowMLogic(ABC):

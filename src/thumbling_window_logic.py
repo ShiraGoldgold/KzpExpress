@@ -1,6 +1,6 @@
 from datetime import timedelta
-from src import WINDOW_MINUTES
-from window_logic import WindowMLogic
+from .constants import WINDOW_MINUTES
+from .window_logic import WindowMLogic
 
 
 class ThumblingWindowLogic(WindowMLogic):

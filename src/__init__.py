@@ -1,3 +1,4 @@
+from .thumbling_window_logic import ThumblingWindowLogic
 from .models import Purchase
 from .generator import create_random_purchase
 from .rabbitmq_producer import RabbitMQProducer
@@ -6,5 +7,4 @@ from .redis_client import RedisClient
 from .kafka_producer import KafkaProducer
 from .kafka_consumer import KafkaConsumer
 from .analytics_service import AnalyticsService
-from .constants import WINDOW_MINUTES, PRODUCTS, PRODUCTS_MAP
-from .thumbling_window_logic import ThumblingWindowLogic
+windowLogic = ThumblingWindowLogic()

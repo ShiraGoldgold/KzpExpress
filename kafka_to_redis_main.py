@@ -1,16 +1,15 @@
 import signal
 import time
-from datetime import datetime, timedelta
-from src import (KafkaConsumer, RedisClient, ThumblingWindowLogic,
-                 WINDOW_MINUTES)
+from datetime import datetime
+from src.constants import WINDOW_MINUTES
+from src import KafkaConsumer, RedisClient, windowLogic
 
 RETRY_DELAY = 5
 running = True
-
 kafka_consumer = KafkaConsumer(retry_delay=RETRY_DELAY, topic_name='purchases_topic',
                                group_id='purchases_group')
 redis_client = RedisClient(retry_delay=RETRY_DELAY)
-thumblingWindowLogic = ThumblingWindowLogic()
+
 
 def shutdown_handler(sig, frame):
     global running
@@ -23,10 +22,10 @@ def shutdown_handler(sig, frame):
 def processing_data_to_redis(data):
     print(f"Processing: {data.get('purchase_id')}")
     purchase_time = datetime.strptime(data.get('purchase_time'), "%Y-%m-%d %H:%M:%S.%f")
-    if thumblingWindowLogic.is_too_old():
+    if windowLogic.is_too_old(purchase_time):
         print(f"Skipping old message from {purchase_time}")
         return
-    key = thumblingWindowLogic.get_window_key(purchase_time)
+    key = windowLogic.get_window_key(purchase_time)
     if not redis_client.add_to_hset(key=key,
                                     data_field=data.get('purchase_id'),
                                     data_value=data.get('item_id'),

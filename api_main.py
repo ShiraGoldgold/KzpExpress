@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 import uvicorn
 from src.constants import WINDOW_MINUTES
 from src import RedisClient, AnalyticsService, windowLogic
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 @asynccontextmanager
@@ -25,8 +25,7 @@ analytics_service = AnalyticsService(redis_client)
 @app.get(f"/hot-products-last-{WINDOW_MINUTES}-minutes-window")
 async def get_hot_products():
     try:
-        window_key = windowLogic.get_window_key(datetime.now() -
-                                              timedelta(minutes=WINDOW_MINUTES))
+        window_key = windowLogic.get_previous_window_key(datetime.now())
         top_products = analytics_service.get_top_three(window_key)
         return {"window": window_key, "data": top_products}
     except Exception as e:

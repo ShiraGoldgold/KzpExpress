@@ -4,7 +4,6 @@ from src import RabbitMQConsumer, KafkaProducer
 
 RETRY_DELAY = 5
 running = True
-
 rabbit_consumer = RabbitMQConsumer(retry_delay=RETRY_DELAY, queue_name='purchases_queue')
 kafka_producer = KafkaProducer(retry_delay=RETRY_DELAY, topic_name='purchases_topic')
 

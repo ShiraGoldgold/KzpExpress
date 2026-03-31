@@ -1,6 +1,6 @@
 from abc import ABC
 import pika
-from .base_client import BaseClient
+from infra.base_client import BaseClient
 
 
 class RabbitMQBase(BaseClient, ABC):

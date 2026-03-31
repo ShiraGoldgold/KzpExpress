@@ -1,5 +1,5 @@
 from datetime import timedelta
-from .constants import WINDOW_MINUTES
+from constants import WINDOW_MINUTES
 from .window_logic import WindowMLogic
 
 

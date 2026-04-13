@@ -1,5 +1,5 @@
 import redis
-from infra.base_client import BaseClient
+from ..base_client import BaseClient
 from redis.retry import Retry
 from redis.backoff import NoBackoff
 

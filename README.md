@@ -106,3 +106,6 @@ python generator_msg_to_rabbitmq.py
 python rabbitmq_to_kafka.py
 python kafka_to_redis.py
 python api_main.py
+
+# To run tests:
+python -m pytest

@@ -1,9 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 import uvicorn
-from src.constants import WINDOW_MINUTES
-from src import RedisClient, AnalyticsService, windowLogic
 from datetime import datetime
+from src import WINDOW_MINUTES, RedisClient, AnalyticsService, windowLogic
 
 
 @asynccontextmanager

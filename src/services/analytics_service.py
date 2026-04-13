@@ -1,5 +1,5 @@
 from collections import Counter
-from constants import PRODUCTS_MAP
+from ..constants import PRODUCTS_MAP
 
 
 class AnalyticsService:

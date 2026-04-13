@@ -1,6 +1,6 @@
 import json
 from confluent_kafka import Producer
-from infra.base_client import BaseClient
+from ..base_client import BaseClient
 
 
 class KafkaProducer(BaseClient):

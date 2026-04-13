@@ -1,6 +1,6 @@
 import json
 from confluent_kafka import Consumer, KafkaError
-from infra.base_client import BaseClient
+from ..base_client import BaseClient
 
 
 class KafkaConsumer(BaseClient):
